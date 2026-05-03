@@ -2,6 +2,14 @@
   box-sizing: border-box;
 }
 
+html {
+  scroll-behavior: smooth;
+}
+
+section[id] {
+  scroll-margin-top: 4.5rem;
+}
+
 :root {
   font-family: Inter, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
   line-height: 1.5;

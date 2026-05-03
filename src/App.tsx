@@ -11,6 +11,10 @@ import {
 } from 'lucide-react'
 import './App.css'
 
+function categorySlug(category: string) {
+  return category.toLowerCase().replace(/\s+/g, '-')
+}
+
 type GitCommand = {
   command: string
   category: string
@@ -125,11 +129,14 @@ function App() {
         </div>
         <nav className="nav">
           <a href="#commands">Commands</a>
+          <a href="#why-learn">Why learn Git</a>
           <a href="#learning">Learning Path</a>
           <a href="#features">Why GitHit</a>
           <a href="#footer">Contact</a>
         </nav>
-        <button className="primary-btn">Start Learning</button>
+        <a className="primary-btn" href="#commands">
+          Start Learning
+        </a>
       </header>
 
       <main>
@@ -143,8 +150,12 @@ function App() {
               recovery, and advanced workflows.
             </p>
             <div className="hero-cta">
-              <button className="primary-btn">Explore Command Library</button>
-              <button className="ghost-btn">View Learning Roadmap</button>
+              <a className="primary-btn" href="#commands">
+                Explore Command Library
+              </a>
+              <a className="ghost-btn" href="#learning">
+                View Learning Roadmap
+              </a>
             </div>
           </div>
           <div className="hero-card">
@@ -183,7 +194,11 @@ function App() {
               {categories.map((category) => (
                 <button
                   key={category}
-                  className={selectedCategory === category ? 'chip active' : 'chip'}
+                  className={
+                    selectedCategory === category
+                      ? `chip active chip--${categorySlug(category)}`
+                      : `chip chip--${categorySlug(category)}`
+                  }
                   onClick={() => setSelectedCategory(category)}
                   type="button"
                 >
@@ -197,7 +212,7 @@ function App() {
             {filteredCommands.map((item) => (
               <article key={`${item.command}-${item.category}`} className="command-card">
                 <div className="command-top">
-                  <span className="badge">{item.category}</span>
+                  <span className={`badge badge--${categorySlug(item.category)}`}>{item.category}</span>
                   <LayoutGrid size={14} />
                 </div>
                 <h3>{item.command}</h3>
@@ -205,6 +220,74 @@ function App() {
                 <code>{item.example}</code>
               </article>
             ))}
+          </div>
+        </section>
+
+        <section id="why-learn" className="why-learn-section">
+          <p className="eyebrow">Why learn this</p>
+          <h2>Git works everywhere—including GitHub and GitLab</h2>
+          <p className="why-lead">
+            Git is the version-control engine you use on your machine. Hosting platforms add collaboration,
+            reviews, and CI on top of the same Git commands you practice here.
+          </p>
+          <div className="why-grid">
+            <article className="why-card why-card--git">
+              <h3>Git (the tool)</h3>
+              <p>
+                Git tracks changes, branches, and history locally and when you push or pull. Everything in the
+                command library applies whether your remote is GitHub, GitLab, Bitbucket, or a self-hosted
+                server.
+              </p>
+              <a
+                className="text-link-btn"
+                href="https://git-scm.com/doc"
+                target="_blank"
+                rel="noreferrer"
+              >
+                Official Git documentation
+              </a>
+            </article>
+            <article className="why-card why-card--github">
+              <h3>GitHub</h3>
+              <p>
+                GitHub hosts repositories, pull requests, issues, and Actions so teams ship software together.
+                You still use <code>git push</code>, <code>git pull</code>, and branches—the site wraps your
+                workflow in a web UI.
+              </p>
+              <div className="why-actions">
+                <a className="primary-btn" href="https://github.com" target="_blank" rel="noreferrer">
+                  GitHub.com
+                </a>
+                <a
+                  className="ghost-btn"
+                  href="https://docs.github.com/en/get-started/quickstart/hello-world"
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  Hello World guide
+                </a>
+              </div>
+            </article>
+            <article className="why-card why-card--gitlab">
+              <h3>GitLab</h3>
+              <p>
+                GitLab offers Git hosting plus DevOps features like merge requests, CI/CD, and security
+                scanning in one product. The same Git commands sync your work with GitLab remotes.
+              </p>
+              <div className="why-actions">
+                <a className="primary-btn" href="https://about.gitlab.com" target="_blank" rel="noreferrer">
+                  GitLab
+                </a>
+                <a
+                  className="ghost-btn"
+                  href="https://docs.gitlab.com/ee/gitlab-basics/start-using-git.html"
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  Start using Git on GitLab
+                </a>
+              </div>
+            </article>
           </div>
         </section>
 
@@ -231,9 +314,9 @@ function App() {
         </section>
 
         <section id="features" className="feature-strip">
-          <div>
-            <h3>Commercial-grade website layout</h3>
-            <p>Built for clarity, trust, and conversions.</p>
+          <div id="pricing">
+            <h3>Free to use</h3>
+            <p>GitHit is a free learning reference—no paywall on the command library or guides.</p>
           </div>
           <div>
             <h3>Built with latest stack</h3>
@@ -254,14 +337,15 @@ function App() {
         <div>
           <h4>Resources</h4>
           <a href="#commands">Command Library</a>
+          <a href="#why-learn">Why learn Git</a>
           <a href="#learning">Learning Path</a>
           <a href="#features">Product Features</a>
         </div>
         <div>
           <h4>Company</h4>
-          <a href="#">About</a>
-          <a href="#">Pricing</a>
-          <a href="#">Contact</a>
+          <a href="#why-learn">About</a>
+          <a href="#pricing">Pricing</a>
+          <a href="#footer">Contact</a>
         </div>
       </footer>
     </div>
