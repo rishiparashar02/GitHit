@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
   BookOpenText,
   BriefcaseBusiness,
@@ -10,6 +10,9 @@ import {
   Users,
 } from 'lucide-react'
 import './App.css'
+import { getGithitVisitCount, incrementGithitVisit, isVisitTrackingConfigured } from './visitCounter'
+
+const AUTHOR_GITHUB = 'https://github.com/rishiparashar02'
 
 function categorySlug(category: string) {
   return category.toLowerCase().replace(/\s+/g, '-')
@@ -82,20 +85,40 @@ const gitCommands: GitCommand[] = [
 function App() {
   const [query, setQuery] = useState('')
   const [selectedCategory, setSelectedCategory] = useState('All')
-  const [visits] = useState(() => {
-    if (typeof window === 'undefined') return 0
-    const visitKey = 'githit-total-visits'
-    const sessionKey = 'githit-session-counted'
-    const existing = Number(localStorage.getItem(visitKey) ?? '0')
-    const countedThisSession = sessionStorage.getItem(sessionKey) === 'true'
-    const nextValue = countedThisSession ? existing : existing + 1
+  const [visits, setVisits] = useState<number | null>(null)
+  const [visitLoadFailed, setVisitLoadFailed] = useState(false)
 
-    if (!countedThisSession) {
-      localStorage.setItem(visitKey, String(nextValue))
-      sessionStorage.setItem(sessionKey, 'true')
+  useEffect(() => {
+    let cancelled = false
+    const sessionKey = 'githit-session-counted'
+    const alreadyCounted = sessionStorage.getItem(sessionKey) === 'true'
+
+    ;(async () => {
+      if (!isVisitTrackingConfigured()) {
+        if (!cancelled) {
+          setVisitLoadFailed(true)
+          setVisits(null)
+        }
+        return
+      }
+      try {
+        const n = alreadyCounted ? await getGithitVisitCount() : await incrementGithitVisit()
+        if (cancelled) return
+        setVisits(n)
+        setVisitLoadFailed(false)
+        if (!alreadyCounted) sessionStorage.setItem(sessionKey, 'true')
+      } catch {
+        if (!cancelled) {
+          setVisitLoadFailed(true)
+          setVisits(null)
+        }
+      }
+    })()
+
+    return () => {
+      cancelled = true
     }
-    return nextValue
-  })
+  }, [])
 
   const categories = useMemo(
     () => ['All', ...Array.from(new Set(gitCommands.map((item) => item.category)))],
@@ -117,9 +140,19 @@ function App() {
 
   return (
     <div className="site">
-      <div className="visit-counter" aria-live="polite">
+      <div
+        className="visit-counter"
+        aria-live="polite"
+        title={
+          visitLoadFailed
+            ? 'Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY, then run supabase-visits.sql in your Supabase project.'
+            : undefined
+        }
+      >
         <Users size={16} />
-        <span>{visits.toLocaleString()} visits</span>
+        <span>
+          {visitLoadFailed ? '—' : visits === null ? '…' : visits.toLocaleString()} visits
+        </span>
       </div>
 
       <header className="header">
@@ -130,9 +163,10 @@ function App() {
         <nav className="nav">
           <a href="#commands">Commands</a>
           <a href="#why-learn">Why learn Git</a>
-          <a href="#learning">Learning Path</a>
-          <a href="#features">Why GitHit</a>
-          <a href="#footer">Contact</a>
+          <a href="#learning">Learning roadmap</a>
+          <a href={AUTHOR_GITHUB} target="_blank" rel="noreferrer">
+            Contact
+          </a>
         </nav>
         <a className="primary-btn" href="#commands">
           Start Learning
@@ -145,16 +179,15 @@ function App() {
             <p className="eyebrow">The complete Git mastery hub</p>
             <h1>Learn every Git command from beginner to advanced</h1>
             <p>
-              GitHit is a commercial-grade learning experience with practical
-              examples for setup, collaboration, branching, rebasing, stashing,
-              recovery, and advanced workflows.
+              Plain-language examples for everyday Git: save your work, share with a team, fix mistakes,
+              and level up from first commit to solid workflows.
             </p>
             <div className="hero-cta">
               <a className="primary-btn" href="#commands">
                 Explore Command Library
               </a>
               <a className="ghost-btn" href="#learning">
-                View Learning Roadmap
+                View learning roadmap
               </a>
             </div>
           </div>
@@ -225,18 +258,31 @@ function App() {
 
         <section id="why-learn" className="why-learn-section">
           <p className="eyebrow">Why learn this</p>
-          <h2>Git works everywhere—including GitHub and GitLab</h2>
+          <h2>Git is the skill; GitHub and GitLab are where you use it</h2>
           <p className="why-lead">
-            Git is the version-control engine you use on your machine. Hosting platforms add collaboration,
-            reviews, and CI on top of the same Git commands you practice here.
+            You only learn Git once. After that, the same commands work whether your team uses GitHub, GitLab,
+            or another host—only the website and clone URL change.
           </p>
+          <ul className="why-simple-list">
+            <li>
+              <strong>Undo mistakes safely</strong> - see history, bring back old versions, and experiment on
+              branches without losing work.
+            </li>
+            <li>
+              <strong>Work with others</strong> - push your commits, pull updates, and resolve conflicts when
+              two people edit the same files.
+            </li>
+            <li>
+              <strong>One habit, many jobs</strong> - Git is the standard for software, data, and docs; it
+              shows up in almost every technical role.
+            </li>
+          </ul>
           <div className="why-grid">
             <article className="why-card why-card--git">
-              <h3>Git (the tool)</h3>
+              <h3>Git (on your computer)</h3>
               <p>
-                Git tracks changes, branches, and history locally and when you push or pull. Everything in the
-                command library applies whether your remote is GitHub, GitLab, Bitbucket, or a self-hosted
-                server.
+                Git remembers every saved version of your project. You commit snapshots, switch branches, and
+                merge work—all from the terminal. The command library above is this layer.
               </p>
               <a
                 className="text-link-btn"
@@ -248,11 +294,11 @@ function App() {
               </a>
             </article>
             <article className="why-card why-card--github">
-              <h3>GitHub</h3>
+              <h3>GitHub (hosting + collaboration)</h3>
               <p>
-                GitHub hosts repositories, pull requests, issues, and Actions so teams ship software together.
-                You still use <code>git push</code>, <code>git pull</code>, and branches—the site wraps your
-                workflow in a web UI.
+                GitHub stores your repo online, hosts pull requests and issues, and can run automated checks.
+                You still run <code>git push</code> and <code>git pull</code>; the site is the hub for review
+                and teamwork.
               </p>
               <div className="why-actions">
                 <a className="primary-btn" href="https://github.com" target="_blank" rel="noreferrer">
@@ -269,10 +315,10 @@ function App() {
               </div>
             </article>
             <article className="why-card why-card--gitlab">
-              <h3>GitLab</h3>
+              <h3>GitLab (hosting + DevOps)</h3>
               <p>
-                GitLab offers Git hosting plus DevOps features like merge requests, CI/CD, and security
-                scanning in one product. The same Git commands sync your work with GitLab remotes.
+                GitLab is another popular place to host Git repos, with merge requests and built-in CI/CD. Your
+                Git commands are identical; you point <code>origin</code> at GitLab instead of GitHub.
               </p>
               <div className="why-actions">
                 <a className="primary-btn" href="https://about.gitlab.com" target="_blank" rel="noreferrer">
@@ -292,61 +338,95 @@ function App() {
         </section>
 
         <section id="learning" className="learning-section">
-          <p className="eyebrow">Learning Path</p>
-          <h2>Move from first commit to pro workflows</h2>
+          <p className="eyebrow">Learning roadmap</p>
+          <h2>Start at step 1- each level builds on the last</h2>
+          <p className="roadmap-intro">
+            Use the filters in the command library to match each stage. Spend a few minutes trying each
+            example in a test folder so your muscle memory sticks.
+          </p>
           <div className="steps">
-            <article>
-              <BookOpenText size={18} />
-              <h3>Level 1: Foundations</h3>
-              <p>Setup, status, add, commit, log, and clean repository habits.</p>
+            <article className="roadmap-card">
+              <div className="roadmap-title-row">
+                <span className="roadmap-step-num">1</span>
+                <BookOpenText size={18} className="roadmap-icon" aria-hidden />
+                <h3>Basics - Save and Inspect your work</h3>
+              </div>
+              <p className="roadmap-goal">
+                Goal: create a repo, stage changes, commit, and read history when something looks wrong.
+              </p>
+              <ul className="roadmap-tasks">
+                <li>
+                  In the library, filter <strong>Setup</strong> then <strong>Basics</strong>:{' '}
+                  <code>git init</code>, <code>git config</code>, <code>status</code>, <code>add</code>,{' '}
+                  <code>commit</code>, <code>log</code>, <code>diff</code>.
+                </li>
+                <li>Practice: make three small commits with clear messages so <code>git log --oneline</code> tells a story.</li>
+              </ul>
             </article>
-            <article>
-              <GitBranch size={18} />
-              <h3>Level 2: Collaboration</h3>
-              <p>Branches, pull requests, merge strategy, origin, and upstream.</p>
+            <article className="roadmap-card">
+              <div className="roadmap-title-row">
+                <span className="roadmap-step-num">2</span>
+                <GitBranch size={18} className="roadmap-icon" aria-hidden />
+                <h3>Branches &amp; remotes - work in parallel</h3>
+              </div>
+              <p className="roadmap-goal">
+                Goal: use a branch for a feature, connect to a remote, and share work without overwriting others.
+              </p>
+              <ul className="roadmap-tasks">
+                <li>
+                  Filter <strong>Branching</strong> and <strong>Remote</strong>: <code>branch</code>,{' '}
+                  <code>switch</code>, <code>merge</code>, <code>remote</code>, <code>fetch</code>,{' '}
+                  <code>pull</code>, <code>push</code>.
+                </li>
+                <li>
+                  On GitHub or GitLab, create a repo, clone it, push a branch, and open a pull/merge request when
+                  you are ready for feedback.
+                </li>
+              </ul>
             </article>
-            <article>
-              <BriefcaseBusiness size={18} />
-              <h3>Level 3: Professional Git</h3>
-              <p>Rebase, stash flows, conflict handling, reflog recovery, and release tags.</p>
+            <article className="roadmap-card">
+              <div className="roadmap-title-row">
+                <span className="roadmap-step-num">3</span>
+                <BriefcaseBusiness size={18} className="roadmap-icon" aria-hidden />
+                <h3>Pro workflows - stay fast and recover fast</h3>
+              </div>
+              <p className="roadmap-goal">
+                Goal: keep history tidy, park unfinished work safely, and recover when a branch or commit goes sideways.
+              </p>
+              <ul className="roadmap-tasks">
+                <li>
+                  Explore <strong>Stash</strong>, <strong>Recovery</strong>, and <strong>Advanced</strong>:{' '}
+                  <code>stash</code>, <code>rebase</code>, <code>reflog</code>, <code>revert</code>, tags for
+                  releases.
+                </li>
+                <li>When you hit a scary message, search the library for the command Git printed—there is usually a safe fix.</li>
+              </ul>
             </article>
-          </div>
-        </section>
-
-        <section id="features" className="feature-strip">
-          <div id="pricing">
-            <h3>Free to use</h3>
-            <p>GitHit is a free learning reference—no paywall on the command library or guides.</p>
-          </div>
-          <div>
-            <h3>Built with latest stack</h3>
-            <p>React 19 + TypeScript + Vite + modern iconography.</p>
-          </div>
-          <div>
-            <h3>Footfall-ready counter</h3>
-            <p>Tracks and displays visits in the top-right corner.</p>
           </div>
         </section>
       </main>
 
       <footer id="footer" className="footer">
-        <div>
-          <h4>GitHit</h4>
-          <p>The complete Git command and workflow learning platform.</p>
+        <div className="footer-grid">
+          <div>
+            <h4>GitHit</h4>
+            <p>The complete Git command and workflow learning platform.</p>
+          </div>
+          <div>
+            <h4>Resources</h4>
+            <a href="#commands">Command library</a>
+            <a href="#why-learn">Why learn Git</a>
+            <a href="#learning">Learning roadmap</a>
+          </div>
+          <div>
+            <h4>Contact</h4>
+            <a href={AUTHOR_GITHUB} target="_blank" rel="noreferrer">
+              GitHub - rishiparashar02
+            </a>
+            <a href="#why-learn">About this site</a>
+          </div>
         </div>
-        <div>
-          <h4>Resources</h4>
-          <a href="#commands">Command Library</a>
-          <a href="#why-learn">Why learn Git</a>
-          <a href="#learning">Learning Path</a>
-          <a href="#features">Product Features</a>
-        </div>
-        <div>
-          <h4>Company</h4>
-          <a href="#why-learn">About</a>
-          <a href="#pricing">Pricing</a>
-          <a href="#footer">Contact</a>
-        </div>
+        <p className="footer-built">GitHit - © 2026</p>
       </footer>
     </div>
   )
